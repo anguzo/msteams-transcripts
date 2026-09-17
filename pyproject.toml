@@ -8,14 +8,14 @@ dynamic = ["version"]
 description = "List and download Microsoft Teams meeting transcripts from the command line, through your own signed-in browser session."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Divya Van Mahajan", email = "divyavanmahajan@users.noreply.github.com" }]
 keywords = ["microsoft-teams", "transcript", "meeting", "recap", "sharepoint", "cli"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: MacOS",
     "Operating System :: POSIX :: Linux",
