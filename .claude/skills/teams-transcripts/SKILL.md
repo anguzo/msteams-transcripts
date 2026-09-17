@@ -1,6 +1,6 @@
 ---
 name: teams-transcripts
-description: List and download Microsoft Teams meeting transcripts (with optional attendees, speakers, shared files) through the user's signed-in browser session using the msteams-transcripts command. Use when asked to fetch, save, summarise, or search Teams meeting transcripts or recaps, or when a Teams recap link (teams.cloud.microsoft/l/meetingrecap) is given.
+description: List and download Microsoft Teams meeting transcripts (with optional attendees, speakers, shared files) through the user's signed-in browser session, using `uvx msteams-transcripts`. Use when asked to fetch, save, summarise, or search Teams meeting transcripts or recaps, or when a Teams recap link (teams.cloud.microsoft/l/meetingrecap) is given.
 ---
 
 # Teams transcripts
@@ -12,22 +12,32 @@ only ever sees what the signed-in user can see.
 
 ## Preconditions
 
-1. The command must be available. In order of preference:
-   - `msteams-transcripts ...` if it is installed, or the alias `teams-transcripts`
-   - `uvx msteams-transcripts ...` when uv is present and it is not installed
-   - `python -m teams_transcripts ...` from a checkout with the package installed
-   Check with `msteams-transcripts --version` before anything else.
+1. Decide how to invoke the tool, in this order of preference:
+   - **`uvx msteams-transcripts ...`** whenever `uv` is available. This is the
+     normal case. It needs no installation and always runs the current release.
+   - `msteams-transcripts ...` if that command is already on PATH, or its alias
+     `teams-transcripts`. Do not install it just to get the shorter form.
+   - `python -m teams_transcripts ...` inside a checkout where the package is
+     installed in the environment.
+
+   Confirm the choice with `uvx msteams-transcripts --version` (or the variant
+   you picked) before anything else. The first uvx run downloads dependencies
+   and takes about a minute; later runs start in a second or two.
+
 2. A dedicated browser must be running with the debugging port:
-   `msteams-transcripts browser`. This is idempotent and returns at once if the
-   browser is already up. If Teams inside that window is not signed in, stop and
-   ask the user to sign in there; you cannot do it for them.
+   `uvx msteams-transcripts browser`. This is idempotent and returns at once if
+   the browser is already up. If Teams inside that window is not signed in, stop
+   and ask the user to sign in there; you cannot do it for them.
 
 ## Commands
 
+Every example below uses `uvx`. If you established a different invocation in
+step 1, substitute it and leave the arguments unchanged.
+
 ```
-msteams-transcripts list  --from YYYY-MM-DD --to YYYY-MM-DD|today [--json]
-msteams-transcripts get   <row#|recap-url|19:meeting_...@thread.v2> [-d] [-f txt|json|vtt|all] [-o DIR]
-msteams-transcripts batch --from D --to D [-d] [-f FMT] [-o DIR] [--only 3,7,12]
+uvx msteams-transcripts list  --from YYYY-MM-DD --to YYYY-MM-DD|today [--json]
+uvx msteams-transcripts get   <row#|recap-url|19:meeting_...@thread.v2> [-d] [-f txt|json|vtt|all] [-o DIR]
+uvx msteams-transcripts batch --from D --to D [-d] [-f FMT] [-o DIR] [--only 3,7,12]
 ```
 
 - `list` prints one row per transcript; a recorded recurring meeting appears
@@ -70,26 +80,30 @@ so a room can be the most talkative "speaker" in a hybrid meeting.
 
 ## Typical flows
 
-- **"Summarise yesterday's meetings"**: `list --from <yesterday> --to <yesterday> --json`,
-  then `batch --from ... --to ... -d -o <temp dir>`, then read the `.txt` files.
-- **"Who attended X and what did they say?"**: `list` over the date range, pick
-  the row by subject, `get N -d`, read the header for invitees and speakers and
-  the body for content.
-- **"Save this recap link"**: `get "<url>" -d -f all`.
+- **"Summarise yesterday's meetings"**:
+  `uvx msteams-transcripts list --from <yesterday> --to <yesterday> --json`, then
+  `uvx msteams-transcripts batch --from ... --to ... -d -o <temp dir>`, then read
+  the `.txt` files.
+- **"Who attended X and what did they say?"**:
+  `uvx msteams-transcripts list --from ... --to ...` over the date range, pick the
+  row by subject, `uvx msteams-transcripts get N -d`, then read the header for
+  invitees and speakers and the body for content.
+- **"Save this recap link"**: `uvx msteams-transcripts get "<url>" -d -f all`.
 
 ## Failure modes and what to do
 
 | Message | Meaning | Action |
 |---|---|---|
-| `The browser did not expose its debugging port` | a window already uses the profile without the port | ask the user to close it, then rerun `browser` |
+| `The browser did not expose its debugging port` | a window already uses the profile without the port | ask the user to close it, then rerun the `browser` command |
 | `Could not capture a Teams token` | the Teams tab is not signed in, or still loading | retry once after about 30 s; if it persists ask the user to sign in in that window |
 | `Could not capture the meeting-content token` | the recap deep link did not resolve | retry; if it persists ask the user to open any meeting's Recap tab in that window, then rerun |
 | `Downloading the transcript failed: HTTP 403` | the user has no access to that recording | report it; there is nothing to fix |
 | `0 transcript(s)` | nothing recorded with a transcript in that range | widen the range, or confirm the meetings were transcribed |
 
-Timing: the first command in a browser session takes 30 to 60 seconds while
-tokens are captured; later ones take 5 to 25 seconds. A `batch` over a month can
-take several minutes. Allow a tool timeout of five minutes or more.
+Timing: the very first `uvx` call also downloads dependencies, which adds about
+a minute once. The first command in a browser session takes 30 to 60 seconds
+while tokens are captured; later ones take 5 to 25 seconds. A `batch` over a
+month can take several minutes. Allow a tool timeout of five minutes or more.
 
 ## Constraints
 
