@@ -1,0 +1,117 @@
+name: Publish
+
+# Releases are tag-driven. Bump the version with `hatch version patch`, commit,
+# then push a tag that matches it:
+#
+#   hatch version patch && git commit -am "Release 0.1.1" && git tag v0.1.1 && git push --follow-tags
+#
+# Publishing uses PyPI trusted publishing, so there is no API token to store.
+# Configure it once at https://pypi.org/manage/account/publishing/ with:
+#   owner/repo = this repository, workflow = publish.yml, environment = pypi
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Where to publish
+        required: true
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+jobs:
+  build:
+    name: Build and verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install build tools
+        run: python -m pip install build twine hatch
+
+      - name: Check the tag matches the package version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          version=$(hatch version)
+          tag="${GITHUB_REF_NAME#v}"
+          echo "package version: $version"
+          echo "tag:             $tag"
+          if [ "$version" != "$tag" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match __version__ ($version). Run 'hatch version' and retag."
+            exit 1
+          fi
+
+      - name: Run tests
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pytest -q
+
+      - name: Build
+        run: python -m build
+
+      - name: Check metadata
+        run: python -m twine check dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  testpypi:
+    name: Publish to TestPyPI
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && inputs.target == 'testpypi'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/msteams-transcripts
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  pypi:
+    name: Publish to PyPI
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && inputs.target == 'pypi')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/msteams-transcripts
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    name: Create the GitHub release
+    needs: pypi
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

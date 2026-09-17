@@ -1,0 +1,54 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "msteams-transcripts"
+dynamic = ["version"]
+description = "List and download Microsoft Teams meeting transcripts from the command line, through your own signed-in browser session."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Divya Van Mahajan" }]
+keywords = ["microsoft-teams", "transcript", "meeting", "recap", "sharepoint", "cli"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Communications :: Conferencing",
+    "Topic :: Utilities",
+]
+dependencies = ["playwright>=1.40"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "build>=1.0", "twine>=5.0"]
+
+[project.urls]
+Homepage = "https://github.com/divyavanmahajan/msteams-transcripts"
+Repository = "https://github.com/divyavanmahajan/msteams-transcripts"
+Issues = "https://github.com/divyavanmahajan/msteams-transcripts/issues"
+
+[project.scripts]
+msteams-transcripts = "teams_transcripts.cli:main"
+teams-transcripts = "teams_transcripts.cli:main"
+
+[tool.hatch.version]
+path = "src/teams_transcripts/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/teams_transcripts"]
+
+[tool.hatch.build.targets.sdist]
+include = ["/src", "/tests", "/README.md", "/LICENSE"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
