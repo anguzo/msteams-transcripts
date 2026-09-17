@@ -209,7 +209,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = build_parser().parse_args(argv)
     configure(port=args.port, profile=args.profile, browser=args.browser)
-    if getattr(args, "out", None) is None and hasattr(args, "out"):
+    if getattr(args, "out", None) is None:
         args.out = default_out()
     try:
         if args.cmd == "browser":
