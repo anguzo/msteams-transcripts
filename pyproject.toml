@@ -30,7 +30,7 @@ classifiers = [
 dependencies = ["playwright>=1.40"]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "build>=1.0", "twine>=5.0"]
+dev = ["pytest>=7", "build>=1.0", "twine>=5.0", "hatch>=1.9"]
 
 [project.urls]
 Homepage = "https://github.com/divyavanmahajan/msteams-transcripts"
