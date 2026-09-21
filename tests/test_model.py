@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from teams_transcripts.model import (
+    MT_RE,
     parse_date,
     refs_from_recap_url,
     safe_name,
@@ -16,6 +17,13 @@ from teams_transcripts.model import (
 )
 
 THREAD = "19:meeting_ZDQwNGFmZmYtNTY1ZC00M2NhLWE2OTgtY2E4ZWMxMzgyZGEy@thread.v2"
+
+
+def test_mt_api_base_uses_the_tenant_region():
+    match = MT_RE.match("https://teams.cloud.microsoft/api/mt/emea/v2.1/me/calendars/calendarView")
+
+    assert match is not None
+    assert match.group(1) == "https://teams.cloud.microsoft/api/mt/emea"
 
 
 class TestThreadId:
