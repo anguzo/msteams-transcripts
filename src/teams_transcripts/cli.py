@@ -1,4 +1,5 @@
 """Command line: browser, list, get, batch."""
+
 from __future__ import annotations
 
 import argparse

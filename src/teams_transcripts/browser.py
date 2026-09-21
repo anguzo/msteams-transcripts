@@ -3,6 +3,7 @@
 The dedicated profile is opened by Playwright itself. No remote-debugging
 listener is exposed, and callers own the lifetime of the returned context.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,18 +58,14 @@ async def _goto(page, url: str, validate_final) -> None:
     try:
         response = await page.goto(url, wait_until="domcontentloaded")
     except Exception as exc:
-        raise TranscriptError(
-            f"Browser navigation failed for {_safe_url_label(url)} ({type(exc).__name__})."
-        ) from exc
+        raise TranscriptError(f"Browser navigation failed for {_safe_url_label(url)} ({type(exc).__name__}).") from exc
     try:
         response_url = getattr(response, "url", "")
         if response_url:
             validate_final(response_url)
         validate_final(page.url)
     except Exception as exc:
-        raise TranscriptError(
-            f"Browser navigation ended at an unexpected origin for {_safe_url_label(url)}."
-        ) from exc
+        raise TranscriptError(f"Browser navigation ended at an unexpected origin for {_safe_url_label(url)}.") from exc
 
 
 async def launch_context(playwright, open_teams: bool = True):

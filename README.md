@@ -191,10 +191,12 @@ import asyncio
 from pathlib import Path
 from teams_transcripts import TeamsSession, download_ref, refs_from_recap_url
 
+
 async def main():
     async with TeamsSession() as s:
         ref = refs_from_recap_url("https://teams.cloud.microsoft/l/meetingrecap?...")
         await download_ref(s, ref, Path("out"), "txt", details=True)
+
 
 asyncio.run(main())
 ```
@@ -250,18 +252,24 @@ trusted user-private directory and its normal Windows permissions.
 ```powershell
 git clone https://github.com/divyavanmahajan/msteams-transcripts
 cd msteams-transcripts
-pip install -e ".[dev]"
-python -m pytest
+uv sync --locked --extra dev
+uv run --locked --extra dev ruff format --check .
+uv run --locked --extra dev ruff check .
+uv run --locked --extra dev ty check src
+uv run --locked --extra dev pytest
 ```
 
-The tests cover the pure functions in `model.py` and `formats.py` and need
-neither a browser nor the network.
+The committed `uv.lock` pins the development and runtime dependency resolution.
+This project requires uv `0.11.21`; the same version is checksum-verified in CI
+and release workflows.
+Ruff enforces formatting and lint rules, while ty checks the package under
+`src/`. The tests need neither a browser nor the network.
 
 Hatchling owns the version, read from `__version__` in
 `src/teams_transcripts/__init__.py`. To release:
 
 ```powershell
-hatch version patch            # or minor, major, or an explicit 1.2.3
+uv run --locked --extra dev hatch version patch # or minor, major, or an explicit 1.2.3
 git commit -am "Release 0.1.1"
 git tag v0.1.1
 git push --follow-tags

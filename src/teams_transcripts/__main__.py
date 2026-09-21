@@ -1,4 +1,5 @@
 """Allow `python -m teams_transcripts`."""
+
 from __future__ import annotations
 
 from .cli import main

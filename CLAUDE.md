@@ -16,8 +16,9 @@
 - The build backend is hatchling. **The version lives in one place only:**
   `__version__` in `src/teams_transcripts/__init__.py`, read by
   `[tool.hatch.version]`. Never hardcode a version anywhere else.
-- Bump it with hatch rather than by hand:
-  `hatch version patch` (or `minor`, `major`, or an explicit `1.2.3`).
+- The project requires uv `0.11.21`; `[tool.uv].required-version` and CI enforce it.
+- Bump it with uv and hatch rather than by hand:
+  `uv run --locked --extra dev hatch version patch` (or `minor`, `major`, or an explicit `1.2.3`).
 - Releases are tag-driven. The tag must be `v` plus the version, for example
   `v0.2.0`; the publish workflow fails if the tag and `__version__` disagree.
 
@@ -44,8 +45,10 @@ everything that the tests cover.
   the message without a traceback. Never call `sys.exit` inside library code.
 - Progress messages go to stderr through `browser.log`, so that stdout stays
   parseable. The `list` table and `--json` output are the only things on stdout.
-- Run `python -m pytest` before committing. Tests must not need a browser or
-  the network.
+- Before committing, run `ruff format --check .`, `ruff check .`, `ty check src`,
+  and `pytest` through `uv run --locked --extra dev`. Keep `uv.lock` updated
+  when dependency declarations change. Tests must not need a browser or the
+  network.
 
 ## Data handling
 

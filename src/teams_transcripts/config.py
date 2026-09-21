@@ -3,6 +3,7 @@
 Every value can be set by an environment variable, and the command line can
 override them again before any command runs.
 """
+
 from __future__ import annotations
 
 import os
@@ -52,15 +53,19 @@ def browser_candidates(explicit: str = "") -> list[str]:
 @dataclass
 class Settings:
     profile_dir: Path = field(
-        default_factory=lambda: Path(os.environ["TT_PROFILE_DIR"]).expanduser()
-        if os.environ.get("TT_PROFILE_DIR")
-        else _default_profile_dir()
+        default_factory=lambda: (
+            Path(os.environ["TT_PROFILE_DIR"]).expanduser()
+            if os.environ.get("TT_PROFILE_DIR")
+            else _default_profile_dir()
+        )
     )
     browser_exe: str = field(default_factory=lambda: os.environ.get("TT_BROWSER_EXE", ""))
     state_dir: Path = field(
-        default_factory=lambda: Path(os.environ["TT_STATE_DIR"]).expanduser()
-        if os.environ.get("TT_STATE_DIR")
-        else Path.home() / ".teams_transcripts"
+        default_factory=lambda: (
+            Path(os.environ["TT_STATE_DIR"]).expanduser()
+            if os.environ.get("TT_STATE_DIR")
+            else Path.home() / ".teams_transcripts"
+        )
     )
 
     @property

@@ -1,4 +1,5 @@
 """Turning the raw transcript document into readable text."""
+
 from __future__ import annotations
 
 import re
@@ -23,9 +24,9 @@ class _Text(HTMLParser):
         self.skip = 0
         self.href = ""
 
-    def handle_data(self, d):
+    def handle_data(self, data: str) -> None:
         if not self.skip:
-            self.parts.append(d)
+            self.parts.append(data)
 
     def handle_starttag(self, tag, attrs):
         if tag in self.SKIP:
@@ -55,7 +56,9 @@ def html_to_text(html: str) -> str:
 def invite_description(body_html: str) -> str:
     """The invitation text, with the Teams join boilerplate cut off."""
     txt = html_to_text(body_html)
-    marks = [i for i in (txt.find("Microsoft Teams meeting"), txt.find("____"), txt.find("Join the meeting now")) if i >= 0]
+    marks = [
+        i for i in (txt.find("Microsoft Teams meeting"), txt.find("____"), txt.find("Join the meeting now")) if i >= 0
+    ]
     return txt[: min(marks)].strip() if marks else txt.strip()
 
 

@@ -82,9 +82,24 @@ class TestDetailsHeader:
             "organizerAddress": "ada@example.com",
             "location": "Microsoft Teams Meeting",
             "attendees": [
-                {"name": "Ada Lovelace", "address": "ada@example.com", "type": "Organizer", "status": {"response": "None"}},
-                {"name": "Alan Turing", "address": "alan@example.com", "type": "Required", "status": {"response": "Accepted"}},
-                {"name": "Grace Hopper", "address": "grace@example.com", "type": "Optional", "status": {"response": "NotResponded"}},
+                {
+                    "name": "Ada Lovelace",
+                    "address": "ada@example.com",
+                    "type": "Organizer",
+                    "status": {"response": "None"},
+                },
+                {
+                    "name": "Alan Turing",
+                    "address": "alan@example.com",
+                    "type": "Required",
+                    "status": {"response": "Accepted"},
+                },
+                {
+                    "name": "Grace Hopper",
+                    "address": "grace@example.com",
+                    "type": "Optional",
+                    "status": {"response": "NotResponded"},
+                },
             ],
             "bodyContent": "<p>Agenda: roadmap</p><p>____</p><p>Microsoft Teams meeting</p>",
         },

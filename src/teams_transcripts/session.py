@@ -5,6 +5,7 @@ session carries no credentials of its own. Teams API calls need a bearer token,
 which is captured from the requests the Teams tab makes while it loads.
 SharePoint transcript content needs only cookies.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -20,8 +21,8 @@ from .model import (
     MCPS_RE,
     MT_RE,
     UrlValidationError,
-    iso_z,
     is_approved_auth_url,
+    iso_z,
     jwt_claims,
     quote_path_component,
     sanitize_terminal,
@@ -33,7 +34,7 @@ from .model import (
 )
 
 try:
-    from playwright.async_api import async_playwright
+    from playwright.async_api import BrowserContext, async_playwright
 except ImportError as exc:  # pragma: no cover
     raise TranscriptError("Playwright is missing. Install this tool with 'pip install msteams-transcripts'.") from exc
 
@@ -66,7 +67,7 @@ class TeamsSession:
 
     def __init__(self) -> None:
         self.pw = None
-        self.ctx = None
+        self.ctx: BrowserContext | None = None
         self.teams = None
         self.tokens: dict[str, str] = {}
         self.bases: dict[str, str] = {}
@@ -105,6 +106,7 @@ class TeamsSession:
     async def teams_page(self):
         if self.teams is not None:
             return self.teams
+        assert self.ctx is not None
         page = None
         for candidate in self.ctx.pages:
             try:
@@ -200,7 +202,9 @@ class TeamsSession:
         log("Waiting for Teams to sign in and load the calendar ...")
         await self._goto(page, TEAMS_URL, self._allow_teams_or_auth_origin)
         if not await self._wait_token("mt", 90):
-            raise TranscriptError("Could not capture a Teams token. Is Teams signed in inside the dedicated browser window?")
+            raise TranscriptError(
+                "Could not capture a Teams token. Is Teams signed in inside the dedicated browser window?"
+            )
 
     async def ensure_mcps_token(self, thread_id: str = "", ical: str = "") -> None:
         """Get the meeting-content token.
@@ -252,9 +256,7 @@ class TeamsSession:
         try:
             response = await page.evaluate(FETCH_JS, [url, headers])
         except Exception as exc:
-            raise TranscriptError(
-                f"Browser request failed for {_safe_url_label(url)} ({type(exc).__name__})."
-            ) from exc
+            raise TranscriptError(f"Browser request failed for {_safe_url_label(url)} ({type(exc).__name__}).") from exc
         if not isinstance(response, dict) or not isinstance(response.get("url"), str):
             raise TranscriptError("The browser returned a response without a valid final URL.")
         try:
@@ -339,6 +341,7 @@ class TeamsSession:
     # -- SharePoint ---------------------------------------------------------
     async def sharepoint_page(self, host: str):
         """A tab on the SharePoint host, used for its cookies."""
+        assert self.ctx is not None
         host = self._sharepoint_host(host)
         if host in self.sp_pages:
             return self.sp_pages[host]
@@ -351,10 +354,10 @@ class TeamsSession:
         for _ in range(60):
             try:
                 validate_sharepoint_url(page.url, host)
-            except UrlValidationError:
+            except UrlValidationError as exc:
                 if not is_approved_auth_url(page.url):
                     await self._close_page(page)
-                    raise TranscriptError("SharePoint redirected to an unexpected origin.")
+                    raise TranscriptError("SharePoint redirected to an unexpected origin.") from exc
                 await asyncio.sleep(1)
                 continue
             if "login" not in page.url.lower():
