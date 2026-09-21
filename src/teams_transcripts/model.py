@@ -16,7 +16,7 @@ from pathlib import Path
 
 from .errors import TranscriptError
 
-MT_RE = re.compile(r"^(https://teams\.cloud\.microsoft/api/mt/part/[^/]+)/")
+MT_RE = re.compile(r"^(https://teams\.cloud\.microsoft/api/mt/[^/]+)/")
 MCPS_RE = re.compile(r"^(https://teams\.cloud\.microsoft/api/mcps/[^/]+)/")
 THREAD_RE = re.compile(r"19(?::|%3a)meeting_[A-Za-z0-9_-]+(?:@|%40)thread\.v2", re.I)
 APPROVED_TEAMS_HOSTS = frozenset({"teams.cloud.microsoft", "teams.microsoft.com"})
