@@ -3,6 +3,7 @@
 Nothing here touches the network or a browser, which makes it the part that is
 easy to test.
 """
+
 from __future__ import annotations
 
 import base64
@@ -25,9 +26,7 @@ APPROVED_AUTH_HOSTS = frozenset(
         "login.microsoftonline.com",
     }
 )
-SHAREPOINT_SUFFIXES = (
-    "sharepoint.com",
-)
+SHAREPOINT_SUFFIXES = ("sharepoint.com",)
 _HOST_LABEL_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
 
 
@@ -257,7 +256,11 @@ def transcript_refs_from_contents(contents: dict, subject: str = "") -> list[dic
     """Transcript references (drive, item, transcript id, host) from a meeting-content response."""
     refs = []
     ical_any = next(
-        (r.get("metadata", {}).get("iCalUid", "") for r in contents.get("resources", []) if (r.get("metadata") or {}).get("iCalUid")),
+        (
+            r.get("metadata", {}).get("iCalUid", "")
+            for r in contents.get("resources", [])
+            if (r.get("metadata") or {}).get("iCalUid")
+        ),
         "",
     )
     for res in contents.get("resources", []):

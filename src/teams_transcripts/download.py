@@ -1,4 +1,5 @@
 """Writing a transcript to disk, optionally with the meeting details."""
+
 from __future__ import annotations
 
 import json
@@ -21,7 +22,9 @@ async def collect_details(s: TeamsSession, ref: dict) -> dict:
     details = {"event": await s.event_details(ref.get("objectId", ""), ref.get("iCalUID", ""))}
     if ref.get("threadId"):
         try:
-            details["files"] = shared_files_from_contents(await s.meeting_contents(ref["threadId"], ref.get("iCalUID", "")))
+            details["files"] = shared_files_from_contents(
+                await s.meeting_contents(ref["threadId"], ref.get("iCalUID", ""))
+            )
         except TranscriptError:
             details["files"] = []
     return details
@@ -59,7 +62,11 @@ async def download_ref(
     host, drive, item = ref["host"], ref["driveId"], ref["driveItemId"]
     if not host:
         raise TranscriptError("No valid SharePoint host is known for this transcript.")
-    tids = [ref["transcriptId"]] if ref.get("transcriptId") else [t["id"] for t in await s.list_transcripts(host, drive, item)]
+    tids = (
+        [ref["transcriptId"]]
+        if ref.get("transcriptId")
+        else [t["id"] for t in await s.list_transcripts(host, drive, item)]
+    )
     if not tids:
         log(f"  no transcript found for {ref.get('subject')}")
         return []

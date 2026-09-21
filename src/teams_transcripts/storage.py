@@ -3,6 +3,7 @@
 POSIX mode bits are enforced where the platform supports them. On Windows,
 mode bits are best-effort only and do not provide ACL enforcement.
 """
+
 from __future__ import annotations
 
 import os

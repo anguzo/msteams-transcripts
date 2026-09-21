@@ -99,7 +99,10 @@ class TestRecapUrl:
         assert refs_from_recap_url(self.URL)["subject"] == "Weekly sync-20260903_141403-Meeting Recording"
 
     def test_link_without_drive_identifiers(self):
-        assert refs_from_recap_url("https://teams.cloud.microsoft/l/meetingrecap?threadId=19%3Ameeting_x%40thread.v2") is None
+        assert (
+            refs_from_recap_url("https://teams.cloud.microsoft/l/meetingrecap?threadId=19%3Ameeting_x%40thread.v2")
+            is None
+        )
 
     def test_web_form_skips_the_desktop_app_prompt(self):
         url = web_recap_url(THREAD, "040000", "tenant-id")
@@ -147,7 +150,14 @@ class TestContents:
         assert refs[0]["start"].startswith("2026-09-03")
 
     def test_transcript_id_falls_back_to_the_location(self):
-        contents = {"resources": [dict(CONTENTS["resources"][1], metadata={k: v for k, v in CONTENTS["resources"][1]["metadata"].items() if k != "transcriptId"})]}
+        contents = {
+            "resources": [
+                dict(
+                    CONTENTS["resources"][1],
+                    metadata={k: v for k, v in CONTENTS["resources"][1]["metadata"].items() if k != "transcriptId"},
+                )
+            ]
+        }
         assert transcript_refs_from_contents(contents)[0]["transcriptId"] == "t1"
 
     def test_meeting_without_recap_content(self):

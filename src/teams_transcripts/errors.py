@@ -1,4 +1,5 @@
 """Exception types raised by the package."""
+
 from __future__ import annotations
 
 

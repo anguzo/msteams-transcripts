@@ -45,9 +45,10 @@ everything that the tests cover.
   the message without a traceback. Never call `sys.exit` inside library code.
 - Progress messages go to stderr through `browser.log`, so that stdout stays
   parseable. The `list` table and `--json` output are the only things on stdout.
-- Run `uv run --locked --extra dev pytest` before committing. Keep `uv.lock` updated when dependency
-  declarations change. Tests must not need a browser or
-  the network.
+- Before committing, run `ruff format --check .`, `ruff check .`, `ty check src`,
+  and `pytest` through `uv run --locked --extra dev`. Keep `uv.lock` updated
+  when dependency declarations change. Tests must not need a browser or the
+  network.
 
 ## Data handling
 

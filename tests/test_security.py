@@ -226,9 +226,7 @@ def test_sharepoint_host_override_is_retained_as_a_validated_option():
 
 
 def test_sparse_recap_url_can_use_sharepoint_host_override():
-    ref = model.refs_from_recap_url(
-        "https://teams.cloud.microsoft/l/meetingrecap?driveId=drive&driveItemId=item"
-    )
+    ref = model.refs_from_recap_url("https://teams.cloud.microsoft/l/meetingrecap?driveId=drive&driveItemId=item")
 
     assert ref is not None
     assert ref["host"] == ""
