@@ -10,19 +10,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import __version__
-from .browser import ensure_browser, log
+from .browser import keep_browser_open, log
 from .config import PROG, SETTINGS, configure
 from .download import download_ref
 from .errors import TranscriptError
-from .model import parse_date, refs_from_recap_url, thread_id_from, transcript_refs_from_contents
+from .model import (
+    parse_date,
+    refs_from_recap_url,
+    sanitize_terminal,
+    thread_id_from,
+    transcript_refs_from_contents,
+    validate_sharepoint_host,
+)
 from .session import TeamsSession
+from .storage import atomic_write_text, ensure_private_dir, read_text_without_symlink
 
 DESCRIPTION = """\
 Download Microsoft Teams meeting transcripts from the command line.
 
-Start the dedicated browser once with the 'browser' command and sign in to Teams
-there. Everything else replays the requests the Teams web client makes, so it
-reaches exactly the meetings you can already open.
+The list, get and batch commands launch a dedicated browser process for their
+session and close it when finished. Use the 'browser' command to sign in
+interactively first; it remains open until you close it or interrupt it.
 """
 
 EPILOG = f"""\
@@ -33,6 +41,22 @@ examples:
   {PROG} get "https://teams.cloud.microsoft/l/meetingrecap?driveId=...&driveItemId=..." -f all
   {PROG} batch --from 2026-09-01 --to 2026-09-30 --details -o ./transcripts
 """
+
+
+def add_deprecated_port_option(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=argparse.SUPPRESS,
+        help="deprecated and ignored; no TCP CDP port is opened",
+    )
+
+
+def sharepoint_host_arg(value: str) -> str:
+    try:
+        return validate_sharepoint_host(value)
+    except TranscriptError as exc:
+        raise argparse.ArgumentTypeError(sanitize_terminal(str(exc))) from exc
 
 
 def default_out() -> str:
@@ -96,51 +120,56 @@ async def cmd_list(args) -> list[dict]:
         for i, r in enumerate(rows, 1):
             r["n"] = i
 
-        SETTINGS.state_dir.mkdir(parents=True, exist_ok=True)
-        SETTINGS.last_list.write_text(json.dumps(rows, indent=1), encoding="utf-8")
+        ensure_private_dir(SETTINGS.state_dir)
+        atomic_write_text(SETTINGS.last_list, json.dumps(rows, indent=1))
         if args.json:
             print(json.dumps(rows, indent=1))
         else:
             print(f"{'#':>3}  {'Start (UTC)':<17} {'Subject':<50} Organizer")
             for r in rows:
-                st = (r["start"] or r["meetingStart"])[:16].replace("T", " ")
-                print(f"{r['n']:>3}  {st:<17} {r['subject'][:50]:<50} {r['organizer']}")
+                st = sanitize_terminal((r["start"] or r["meetingStart"])[:16].replace("T", " "))
+                subject = sanitize_terminal(str(r["subject"]))[:50]
+                organizer = sanitize_terminal(str(r["organizer"]))
+                print(f"{r['n']:>3}  {st:<17} {subject:<50} {organizer}")
             log(f"{len(rows)} transcript(s). Use:  {PROG} get <#>   or   {PROG} batch --from ... --to ...")
         return rows
 
 
-async def _download_by_thread(s: TeamsSession, thread_id: str, args) -> None:
+async def _download_by_thread(s: TeamsSession, thread_id: str, args, sharepoint_host: str = "") -> None:
     refs = transcript_refs_from_contents(await s.meeting_contents(thread_id))
     if not refs:
         raise TranscriptError("No transcript was found for that meeting.")
     for r in refs:
+        if sharepoint_host:
+            r["host"] = sharepoint_host
         await download_ref(s, r, Path(args.out), args.format, args.details)
 
 
 async def cmd_get(args) -> None:
     """Download one transcript, named by row number, recap link or thread id."""
     target: str = args.target
+    sharepoint_host = validate_sharepoint_host(args.sharepoint_host) if args.sharepoint_host else ""
     async with TeamsSession() as s:
         if target.isdigit():
             if not SETTINGS.last_list.exists():
                 raise TranscriptError(f"No previous list. Run:  {PROG} list --from ... --to ...")
-            rows = json.loads(SETTINGS.last_list.read_text(encoding="utf-8"))
+            rows = json.loads(read_text_without_symlink(SETTINGS.last_list))
             ref = next((r for r in rows if r["n"] == int(target)), None)
             if not ref:
                 raise TranscriptError(f"There is no row {target} in the last list.")
-        elif target.startswith("http"):
+        elif "://" in target:
             ref = refs_from_recap_url(target)
             if ref is None:
                 tid = thread_id_from(target)
                 if not tid:
                     raise TranscriptError("That link has neither drive identifiers nor a meeting thread id.")
-                await _download_by_thread(s, tid, args)
+                await _download_by_thread(s, tid, args, sharepoint_host)
                 return
         else:
-            await _download_by_thread(s, thread_id_from(target) or target, args)
+            await _download_by_thread(s, thread_id_from(target) or target, args, sharepoint_host)
             return
-        if args.sharepoint_host:
-            ref["host"] = args.sharepoint_host
+        if sharepoint_host:
+            ref["host"] = sharepoint_host
         await download_ref(s, ref, Path(args.out), args.format, args.details)
 
 
@@ -172,23 +201,31 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    ap.add_argument("--port", type=int, default=0, help="browser debugging port (default 9222, or TT_CDP_PORT)")
+    ap.add_argument("--port", type=int, default=None, help="deprecated and ignored; no TCP CDP port is opened")
     ap.add_argument("--profile", default="", help="browser profile directory (or TT_PROFILE_DIR)")
     ap.add_argument("--browser", default="", help="path to the Edge or Chrome executable (or TT_BROWSER_EXE)")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("browser", help="start or check the dedicated browser instance")
+    browser_parser = sub.add_parser("browser", help="open the dedicated browser for interactive sign-in")
+    add_deprecated_port_option(browser_parser)
 
     p = sub.add_parser("list", help="list past online meetings that have transcripts")
+    add_deprecated_port_option(p)
     p.add_argument("--from", dest="frm", required=True, metavar="YYYY-MM-DD")
     p.add_argument("--to", required=True, metavar="YYYY-MM-DD", help="a date, or 'today'")
     p.add_argument("--json", action="store_true", help="print JSON instead of a table")
 
     p = sub.add_parser("get", help="download one transcript")
+    add_deprecated_port_option(p)
     p.add_argument("target", help="row number from 'list', a recap URL, or 19:meeting_...@thread.v2")
     p.add_argument("-o", "--out", default=None, help="output directory (default ./transcripts)")
     p.add_argument("-f", "--format", choices=["txt", "json", "vtt", "all"], default="txt")
-    p.add_argument("--sharepoint-host", default="", help="override the SharePoint host, e.g. contoso-my.sharepoint.com")
+    p.add_argument(
+        "--sharepoint-host",
+        type=sharepoint_host_arg,
+        default=None,
+        help="validated commercial tenant host override, e.g. contoso-my.sharepoint.com",
+    )
     p.add_argument(
         "-d",
         "--details",
@@ -197,6 +234,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     p = sub.add_parser("batch", help="download every transcript in a date range")
+    add_deprecated_port_option(p)
     p.add_argument("--from", dest="frm", required=True, metavar="YYYY-MM-DD")
     p.add_argument("--to", required=True, metavar="YYYY-MM-DD")
     p.add_argument("-o", "--out", default=None, help="output directory (default ./transcripts)")
@@ -213,13 +251,12 @@ def main(argv: list[str] | None = None) -> None:
         args.out = default_out()
     try:
         if args.cmd == "browser":
-            ensure_browser()
-            log(f"Debugging endpoint: {SETTINGS.cdp_url}   profile: {SETTINGS.profile_dir}")
+            asyncio.run(keep_browser_open())
             return
         runner = {"list": cmd_list, "get": cmd_get, "batch": cmd_batch}[args.cmd]
         asyncio.run(runner(args))
-    except TranscriptError as ex:
-        sys.exit(str(ex))
+    except (TranscriptError, ValueError) as ex:
+        sys.exit(sanitize_terminal(str(ex)))
     except KeyboardInterrupt:
         sys.exit(130)
 
