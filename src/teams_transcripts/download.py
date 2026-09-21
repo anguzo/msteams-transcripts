@@ -10,6 +10,7 @@ from .errors import TranscriptError
 from .formats import invite_description, speakers_of, transcript_to_text
 from .model import safe_name, shared_files_from_contents
 from .session import TeamsSession
+from .storage import atomic_write_text
 
 # Recording file names look like "<subject>-20260903_141403-Transcription....mp4"
 RECORDING_NAME_RE = re.compile(r"^(.*?)-(\d{8})_(\d{6})(?:-.*)?$")
@@ -57,7 +58,7 @@ async def download_ref(
     """
     host, drive, item = ref["host"], ref["driveId"], ref["driveItemId"]
     if not host:
-        raise TranscriptError("No SharePoint host is known for this transcript; pass --sharepoint-host.")
+        raise TranscriptError("No valid SharePoint host is known for this transcript.")
     tids = [ref["transcriptId"]] if ref.get("transcriptId") else [t["id"] for t in await s.list_transcripts(host, drive, item)]
     if not tids:
         log(f"  no transcript found for {ref.get('subject')}")
@@ -80,7 +81,6 @@ async def download_ref(
         subject = det["event"]["subject"]
 
     stem = safe_name(f"{when.replace(':', '')} - {subject or 'meeting'}".strip(" -"))
-    out_dir.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
     for i, tid in enumerate(tids):
         suffix = f" ({i + 1})" if len(tids) > 1 else ""
@@ -90,19 +90,19 @@ async def download_ref(
         source = ref.get("webUrl") or ref.get("location") or ""
         if fmt in ("txt", "all"):
             p = base.with_suffix(".txt")
-            p.write_text(transcript_to_text(doc, subject or stem, when or "unknown", source, det), encoding="utf-8")
+            atomic_write_text(p, transcript_to_text(doc, subject or stem, when or "unknown", source, det))
             written.append(p)
         if det:
             p = base.with_suffix(".meta.json")
-            p.write_text(json.dumps(_meta_document(ref, det, doc, subject, when), indent=1, ensure_ascii=False), encoding="utf-8")
+            atomic_write_text(p, json.dumps(_meta_document(ref, det, doc, subject, when), indent=1, ensure_ascii=False))
             written.append(p)
         if fmt in ("json", "all"):
             p = base.with_suffix(".json")
-            p.write_text(doc_json, encoding="utf-8")
+            atomic_write_text(p, doc_json)
             written.append(p)
         if fmt in ("vtt", "all"):
             p = base.with_suffix(".vtt")
-            p.write_text(await s.fetch_transcript(host, drive, item, tid, "vtt"), encoding="utf-8")
+            atomic_write_text(p, await s.fetch_transcript(host, drive, item, tid, "vtt"))
             written.append(p)
         log(f"  saved {written[-1].name}  ({len(doc.get('entries', []))} entries)")
     return written
