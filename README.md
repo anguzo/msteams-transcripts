@@ -230,18 +230,21 @@ Anything the user can act on raises `TranscriptError`.
 ```powershell
 git clone https://github.com/divyavanmahajan/msteams-transcripts
 cd msteams-transcripts
-pip install -e ".[dev]"
-python -m pytest
+uv sync --locked --extra dev
+uv run --locked --extra dev pytest
 ```
 
-The tests cover the pure functions in `model.py` and `formats.py` and need
-neither a browser nor the network.
+The committed `uv.lock` pins the development and runtime dependency resolution.
+This project requires uv `0.11.21`; the same version is checksum-verified in CI
+and release workflows.
+The tests cover the pure functions in `model.py` and `formats.py` and need neither
+a browser nor the network.
 
 Hatchling owns the version, read from `__version__` in
 `src/teams_transcripts/__init__.py`. To release:
 
 ```powershell
-hatch version patch            # or minor, major, or an explicit 1.2.3
+uv run --locked --extra dev hatch version patch # or minor, major, or an explicit 1.2.3
 git commit -am "Release 0.1.1"
 git tag v0.1.1
 git push --follow-tags
