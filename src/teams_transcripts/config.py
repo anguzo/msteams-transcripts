@@ -51,7 +51,6 @@ def browser_candidates(explicit: str = "") -> list[str]:
 
 @dataclass
 class Settings:
-    cdp_port: int = field(default_factory=lambda: int(os.environ.get("TT_CDP_PORT", "9222")))
     profile_dir: Path = field(
         default_factory=lambda: Path(os.environ["TT_PROFILE_DIR"]).expanduser()
         if os.environ.get("TT_PROFILE_DIR")
@@ -65,10 +64,6 @@ class Settings:
     )
 
     @property
-    def cdp_url(self) -> str:
-        return f"http://127.0.0.1:{self.cdp_port}"
-
-    @property
     def last_list(self) -> Path:
         """Where the rows printed by the last `list` run are cached."""
         return self.state_dir / "last_list.json"
@@ -79,8 +74,9 @@ SETTINGS = Settings()
 
 def configure(port: int | None = None, profile: str = "", browser: str = "") -> Settings:
     """Apply command-line overrides to the process-wide settings."""
-    if port:
-        SETTINGS.cdp_port = port
+    # Kept for callers of older releases. Browser sessions are Playwright-owned
+    # and never open a TCP CDP listener, so the value is intentionally ignored.
+    _ = port
     if profile:
         SETTINGS.profile_dir = Path(profile).expanduser()
     if browser:

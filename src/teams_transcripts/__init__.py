@@ -1,8 +1,8 @@
 """List and download Microsoft Teams meeting transcripts through a signed-in browser.
 
 The Teams web client already receives the whole transcript when you open a meeting
-Recap tab; the Download button is only a UI policy. This package attaches to a
-browser you are signed in to and replays the same requests, so it sees exactly what
+Recap tab; the Download button is only a UI policy. This package launches a
+dedicated browser profile and replays the same requests, so it sees exactly what
 you can see and nothing more.
 
 Library use::
